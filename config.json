@@ -4,8 +4,8 @@
     "USE_BNB": 1,
     "ORDER_VALUE": 60,
     "PROFIT_MAKE": 0.015, 
-    "BOT_TOKEN": "836930013:AAGU_zpEd98Wv4BxdG0gk86KUxjUsnJ5JUM",
-    "BOT_CHAT": "478006482",  
+    "BOT_TOKEN": "",
+    "BOT_CHAT": "",  
     "LOOP_TIME": 3,
 	"LISTEN_PORT": 80,
 	"INITIAL_INVESTMENT": 5854.13
