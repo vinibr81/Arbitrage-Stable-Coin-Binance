@@ -1,0 +1,35 @@
+{
+  "name": "stablecoins-infinity-profit-bot",
+  "version": "1.0.0",
+  "description": "Make infinity money with stablecoins",
+  "main": "main.js",
+  "repository": "github:itxtoledo/Stablecoins-Infinity-Profit-Bot",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "author": {
+    "name": "Gustavo Toledo",
+    "email": "gustavo@obex.pw",
+    "url": "https://obex.pw"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "binance-api-node": "^0.9.2",
+    "dateformat": "^3.0.3",
+    "express": "^4.17.1",
+    "get-json": "^1.0.1",
+    "http": "0.0.0",
+    "lowdb": "^1.0.0",
+    "node-cron": "^2.0.3",
+    "node-telegram-bot-api": "^0.29.0"
+  },
+  "keywords": [
+    "javascript",
+    "nodejs",
+    "binance",
+    "stablecoin",
+    "tusd",
+    "usdt"
+  ],
+  "devDependencies": {}
+}
