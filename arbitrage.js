@@ -19,42 +19,33 @@ var task = cron.schedule('*/' + config.LOOP_TIME + ' * * * * *', () => {
 	
 	// Detecta o par com menor e maior valor
 	for (let i=0; i<coins.length; i++) {
-  		client.dailyStats({ symbol: coins[i] }).then((result) => {
+  		client.dailyStats({ symbol: config.MARKET + coins[i] }).then((result) => {
 			if(result.lastPrice > max_price) {
 				max_price = parseFloat(result.lastPrice).toFixed(2);
-				max_par = coins[i];
+				max_par = config.MARKET + coins[i];
 			}			
 		});
 	}
 	
 	for (let i=0; i<coins.length; i++) {
-  		client.dailyStats({ symbol: coins[i] }).then((result) => {
+  		client.dailyStats({ symbol: config.MARKET + coins[i] }).then((result) => {
 			if(result.lastPrice < min_price) {
 				min_price = parseFloat(result.lastPrice).toFixed(2);
-				min_par = coins[i];
+				min_par = config.MARKET + coins[i];
+				currency_min_par = coins[i];
 			}			
-			
-			/*if(min_price == 0) {
-				min_price = parseFloat(result.lastPrice).toFixed(2);
-				min_par = coins[i];
-			} else {
-				if(result.lastPrice < min_price) {
-					min_price = parseFloat(result.lastPrice).toFixed(2);
-					min_par = coins[i];
-				}
-			}*/
 		});
 	}
 	
 	// Verifica o saldo para compras e iniciar a negociação
 	client.accountInfo({ useServerTime: true }).then((result) => {
 		for (let index = 0; index < result.balances.length; index++) {
-			if (result.balances[index].asset == min_par) {
+			if (result.balances[index].asset == currency_min_par) {
 				balance_trade = parseFloat(result.balances[index].free);
 			}
 		}
 	});
-
+	
 	// Verifica a última ordem de compra se existe e o valor
 	client.book({ symbol: min_par, limit: 5 }).then((result) => {
 		min_book = parseFloat(result.asks[0].price).toFixed(2);
@@ -74,7 +65,7 @@ var task = cron.schedule('*/' + config.LOOP_TIME + ' * * * * *', () => {
 	percentage_book_spread = parseFloat(((max_book - min_book) / min_book) * 100).toFixed(4);
 	
 	// Adiciona impostos no cálculo
-	if(config.USE_BNB == 1) {
+	if(config.BNB_FEES == 1) {
 		use_bnb = 'Sim';
 		percentage_spread_liquid = parseFloat(percentage_spread  - 0.15).toFixed(4);
 		percentage_book_spread_liquid = parseFloat(percentage_book_spread - 0.15).toFixed(4);
@@ -84,33 +75,35 @@ var task = cron.schedule('*/' + config.LOOP_TIME + ' * * * * *', () => {
 		percentage_book_spread_liquid = parseFloat(percentage_book_spread - 0.2).toFixed(4);
 	}
 
-
 	// Verifica saldo, se positivo, se spread positivo e se existe liquidez, efetua a operação
-	if(percentage_book_spread_liquid > config.PROFIT_MAKE && balance_trade >= config.ORDER_VALUE) {
+	if(percentage_book_spread_liquid > config.PROFIT_MAKE) {
 		console.log("Encontrado SPREAD: "+ percentage_spread_liquid + "Entre os pares: "+ min_par +" e "+  max_par +". Verificando a liquidez!");
 		if(min_value_book >= value_trade && max_value_book >= value_trade) {
 			console.log("Liquidez encontrada, executando ordens a mercado para compra e venda. Lucro esperado: "+ percentage_book_spread_liquid+ "%");
-			client.order({
-				symbol: min_par,
-				side: 'BUY',
-				type: 'MARKET',
-				quantity: value_trade,
-				useServerTime: true
-			}).then((result) => {
-				console.log("ORDEM DE COMPRA EXECUTADA COM SUCESSO")
-			});
-			
-			client.order({
-				symbol: max_par,
-				side: 'SELL',
-				type: 'MARKET',
-				quantity: value_trade,
-				useServerTime: true
-			}).then((result) => {
-				console.log("ORDEM DE VENDA EXECUTADA COM SUCESSO")
-			});
-			bot.sendMessage(config.BOT_CHAT, '\u{1F4C8} Arbitragem executada com sucesso. Pares comprado: '+min_par+' Valor Comprado: '+ min_book +' Par vendido: '+max_par+' Valor Vendido: '+ max_book +' Lucro esperado: \u{1f4b5} '+ percentage_book_spread_liquid +' %');
-			console.log("Aguardando 60 segundos para nova operação");
+			if(balance_trade > config.ORDER_VALUE) {
+				client.order({
+					symbol: min_par,
+					side: 'BUY',
+					type: 'MARKET',
+					quantity: value_trade,
+					useServerTime: true
+				}).then((result) => {
+					console.log("ORDEM DE COMPRA EXECUTADA COM SUCESSO")
+				});
+
+				client.order({
+					symbol: max_par,
+					side: 'SELL',
+					type: 'MARKET',
+					quantity: value_trade,
+					useServerTime: true
+				}).then((result) => {
+					console.log("ORDEM DE VENDA EXECUTADA COM SUCESSO")
+				});
+				bot.sendMessage(config.BOT_CHAT, '\u{1F4C8} Arbitragem executada com sucesso. Pares comprado: '+min_par+' Valor Comprado: '+ min_book +' Par vendido: '+max_par+' Valor Vendido: '+ max_book +' Lucro esperado: \u{1f4b5} '+ percentage_book_spread_liquid +' %');
+			} else {
+				bot.sendMessage(config.BOT_CHAT, '\u{1F6AB} ALERTA OPERAÇAO NÃO EXECUTADA. Saldo insuficiente para a operação: Arbitragem executada com sucesso. Pares comprado: '+min_par+' Valor Comprado: '+ min_book +' Par vendido: '+max_par+' Valor Vendido: '+ max_book +' Lucro esperado: \u{1f4b5} '+ percentage_book_spread_liquid +' %');
+			}
 		}
 	}
 	
@@ -136,7 +129,7 @@ var task = cron.schedule('*/' + config.LOOP_TIME + ' * * * * *', () => {
 	console.log("DIFERENÇA %.............:", percentage_book_spread);
 	console.log("DIFERENÇA COM TAXAS %...:", percentage_book_spread_liquid);
 
-	
+	// reseta contadores
 	min_price = 9999999999999999999999;
 	max_price = 0;
 
@@ -162,9 +155,5 @@ percentage_book_spread = 0;
 percentage_book_spread_liquid = 0;
 value_trade = 0;
 balance_trade = 0;
-coins = ['BTCUSDT', 'BTCTUSD', 'BTCUSDC', 'BTCPAX'];
-//coins = ['LTCUSDT', 'LTCUSDC', 'LTCTUSD', 'LTCPAX'];
-//coins = ['ETHUSDT', 'ETHUSDC', 'ETHTUSD', 'ETHPAX'];
-//coins = ['XRPUSDT', 'XRPUSDC', 'XRPTUSD', 'XRPPAX']; 
-use_bnb = 'Sim';
+coins = ['USDT', 'TUSD', 'USDC', 'PAX'];
 startTime = Math.floor(+new Date() / 1000);
