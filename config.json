@@ -1,13 +1,13 @@
 {
     "API_KEY": "",
     "SECRET_KEY": "",
-    "USE_BNB": 1,
     "ORDER_VALUE": 60,
-    "PROFIT_MAKE": 0.015, 
+    "PROFIT_MAKE": 0.04, 
     "BOT_TOKEN": "",
-    "BOT_CHAT": "",  
-    "LOOP_TIME": 3,
-	"LISTEN_PORT": 80,
-	"INITIAL_INVESTMENT": 5854.13
+    "BOT_CHAT": "", 
+    "MARKET": "BTC",
+    "BNB_FEES": 1,
+    "LOOP_TIME": 4,
+    "INITIAL_INVESTMENT": 0 
 }
 
