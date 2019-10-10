@@ -18,8 +18,8 @@ function sleep(ms) {
 }
 
 async function wait_sell() {
-  console.log('Aguardando 5 segundos para execução da venda');
-  await sleep(5);
+  console.log('Aguardando 3 segundos para execução da venda');
+  await sleep(3);
 }
 
 var task = cron.schedule('*/' + config.LOOP_TIME + ' * * * * *', () => {
@@ -45,38 +45,36 @@ var task = cron.schedule('*/' + config.LOOP_TIME + ' * * * * *', () => {
 		}
 	});
 
-	// Detecta o par com menor valor
+	
+	// Verifica, através do boook de ofertas a ordem de compra que atende os requisitos:
+	// Diferença de valor conforme o make_profit
+	// Valor vendido, se atende a demanda de compra e venda
 	for (let i=0; i<coins_min.length; i++) {
-  		client.dailyStats({ symbol: config.MARKET + coins_min[i] }).then((result) => {
-			if(result.lastPrice < min_price) {
-				min_price = parseFloat(result.lastPrice).toFixed(2);
+		client.book({ symbol: config.MARKET + coins_min[i], limit: 5 }).then((result) => {
+			let value_book  = parseFloat(result.asks[0].price).toFixed(2);
+			if(value_book < min_price) {
+				min_price = value_book;
 				min_par = config.MARKET + coins_min[i];
 				currency_min_par = coins_min[i];
-			}			
+				min_book = parseFloat(result.asks[0].price).toFixed(2);
+				min_value_book = result.asks[0].quantity;
+			}
 		});
 	}
 
-	// Detecta o par com maior valor
 	for (let i=0; i<coins_max.length; i++) {
-  		client.dailyStats({ symbol: config.MARKET + coins_max[i] }).then((result) => {
-			if(result.lastPrice > max_price) {
-				max_price = parseFloat(result.lastPrice).toFixed(2);
+		client.book({ symbol: config.MARKET + coins_max[i], limit: 5 }).then((result) => {
+			let value_book = parseFloat(result.bids[0].price).toFixed(2);
+			if(value_book > max_price) {
+				max_price = value_book;
 				max_par = config.MARKET + coins_max[i];
-			}			
+				max_book = parseFloat(result.bids[0].price).toFixed(2);
+				max_value_book = result.bids[0].quantity;
+			}
 		});
 	}
 	
-	// Verifica a última ordem de compra (preço e valor)
-	client.book({ symbol: min_par, limit: 5 }).then((result) => {
-		min_book = parseFloat(result.asks[0].price).toFixed(2);
-		min_value_book = result.asks[0].quantity;
-	});
-	
-	client.book({ symbol: max_par, limit: 5 }).then((result) => {
-		max_book = parseFloat(result.bids[0].price).toFixed(2);
-		max_value_book = result.bids[0].quantity;
-	});
-	
+		
 	// Determina a quantidade em cripto (BTC, LTC) a iniciar negociação conforme valor em dólar
 	value_trade = (config.ORDER_VALUE / max_price).toFixed(4);
 
@@ -138,17 +136,12 @@ var task = cron.schedule('*/' + config.LOOP_TIME + ' * * * * *', () => {
 	console.log("VALOR PARA TRADE........:", value_trade);
 	console.log("================ MENOR VALOR - COMPRA ===========================");
 	console.log("PAR.....................:", min_par);
-	console.log("VALOR...................:", min_price);
 	console.log("VALOR NO BOOK...........:", min_book);
 	console.log("QUANTIDADE VENDIDA......:", min_value_book);
 	console.log("================ MAIOR VALOR - VENDA ============================");
 	console.log("PAR.....................:", max_par);
-	console.log("VALOR...................:", max_price);
 	console.log("VALOR NO BOOK...........:", max_book);
 	console.log("QUANTIDADE VENDIDA......:", max_value_book);
-	console.log("================ PERCENTUAL NO PREÇO ============================");
-	console.log("DIFERENÇA %.............:", percentage_spread);
-	console.log("DIFERENÇA COM TAXAS %...:", percentage_spread_liquid);
 	console.log("================ PERCENTUAL NO BOOK =============================");
 	console.log("DIFERENÇA %.............:", percentage_book_spread);
 	console.log("DIFERENÇA COM TAXAS %...:", percentage_book_spread_liquid);
